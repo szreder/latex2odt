@@ -155,6 +155,13 @@ bool ignore(const QString &keyword)
 	return Keywords.contains(keyword);
 }
 
+inline void addEntities(QString &text)
+{
+	text.replace("&", "&amp;");
+	text.replace("<", "&lt;");
+	text.replace(">", "&gt;");
+}
+
 }
 
 inline QString generateBegin(const QString &s)
@@ -251,6 +258,8 @@ struct Document {
 	void extract(const QString &data, int &idx, Node *root, const QString &token);
 	QString getToken(const QString &data, int &idx);
 	void parseSource(const QString &data, int &idx, Node *node, const QString &endMarker);
+	void parseSourceMarkdown(const QString &data);
+	void parseSourceMarkdown(const QString &data, int &idx, Node *node, const QString &endMarker);
 
 	void output() const;
 
@@ -351,9 +360,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 			content.replace("---", "–");
 			content.replace("--", "–");
 		}
-		content.replace("&", "&amp;");
-		content.replace("<", "&lt;");
-		content.replace(">", "&gt;");
+		addEntities(content);
 
 		QStringList contentList = content.split("\n\n");
 
@@ -484,6 +491,148 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 				content += data[idx];
 			++idx;
 		}
+	}
+}
+
+void Document::parseSourceMarkdown(const QString &data, int &idx, Node *node, const QString &endMarker)
+{
+	static const QHash <QChar, QString> FragmentMap {
+		{'*', Strings::BoldFace},
+		{'`', Strings::TextTT},
+	};
+
+	QString content;
+
+	auto addText = [this, &content, node]() {
+		if (content.isEmpty())
+			return;
+		content.replace("&", "&amp;");
+		content.replace("<", "&lt;");
+		content.replace(">", "&gt;");
+
+		addNode(node, Node::Type::Text, content);
+		content.clear();
+	};
+
+	while (idx != data.length()) {
+		QChar current = data[idx++];
+
+		if (endMarker == current) {
+			addText();
+			return;
+		}
+
+		if (!parseCtx.inCode && current == '[') { //skip URLs
+			addText();
+			do {
+				ensureData(data, idx, 1);
+				current = data[idx++];
+			} while (current != '(');
+
+			int endUrl = idx;
+			do {
+				ensureData(data, endUrl, 1);
+				++endUrl;
+			} while (data[endUrl] != ')');
+
+			Node *urlNode = addNode(node, Node::Type::Fragment, Strings::TextTT);
+			addNode(urlNode, Node::Type::Text, data.mid(idx, endUrl - idx));
+
+			idx = endUrl + 1;
+			continue;
+		}
+
+		if (!parseCtx.inCode && FragmentMap.contains(current)) {
+			addText();
+			Node *child = addNode(node, Node::Type::Fragment, FragmentMap[current]);
+			if (current == '`')
+				parseCtx.inCode = true;
+			parseSourceMarkdown(data, idx, child, current);
+			if (current == '`')
+				parseCtx.inCode = false;
+		} else {
+			content += current;
+		}
+	}
+
+	addText();
+}
+
+void Document::parseSourceMarkdown(const QString &data)
+{
+	QStringList lines = data.split('\n');
+
+	{
+		Node *t = addNode(&documentRoot, Node::Type::Fragment, Strings::Title);
+		int idx = 1;
+		parseSourceMarkdown(lines[0], idx, t, QString{});
+		addNode(&documentRoot, Node::Type::Tag, Strings::MakeTitle);
+	}
+
+	int line = 1;
+	while (line != lines.count()) {
+		QString s = lines[line++];
+		if (!parseCtx.inCode && s.simplified().isEmpty())
+			continue;
+
+		if (s == "---") //TODO maybe? (horizontal rule)
+			continue;
+
+		if (s.startsWith("-")) {
+			Node *list = addNode(&documentRoot, Node::Type::Environment, Strings::Itemize);
+
+			while (s.startsWith("-")) {
+				addNode(list, Node::Type::Tag, Strings::Item);
+				int idx = 1;
+				parseSourceMarkdown(s, idx, list, QString{});
+
+				if (line == lines.count())
+					break;
+				s = lines[line++];
+			}
+
+			continue;
+		}
+
+		if (s.startsWith("```")) {
+			addNode(&documentRoot, Node::Type::Tag, Strings::CodeStart);
+
+			bool end = false;
+			do {
+				if (line == lines.count()) {
+					qCritical() << "Unexpected EOF";
+					abort();
+				}
+				s = lines[line++];
+				end = s.startsWith("```");
+				if (!end) {
+					Node *codeLine = addNode(&documentRoot, Node::Type::Environment, Strings::CodeLine);
+					Node *lineContent = addNode(codeLine, Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
+					addEntities(s);
+					addNode(lineContent, Node::Type::Text, s);
+				}
+			} while (!end);
+			addNode(&documentRoot, Node::Type::Tag, Strings::CodeEnd);
+			continue;
+		}
+
+		Node *n;
+		const QString *envName;
+		int hashSymbolCnt = 0;
+		while (hashSymbolCnt < s.length() && s[hashSymbolCnt] == '#')
+			++hashSymbolCnt;
+
+		if (hashSymbolCnt == 1 || hashSymbolCnt == 2) {
+			envName = &Strings::Section;
+		} else if (hashSymbolCnt == 3 || hashSymbolCnt == 4) {
+			envName = &Strings::Subsection;
+		} else {
+			envName = &Strings::Paragraph;
+		}
+
+		n = addNode(&documentRoot, Node::Type::Environment, *envName);
+		int idx = hashSymbolCnt;
+		parseSourceMarkdown(s, idx, n, QString{});
 	}
 }
 
@@ -845,15 +994,20 @@ void debugOutput(const Node *n, int indent = 0)
 		debugOutput(child, indent + 1);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	QTextStream input{stdin};
 	QString data = input.readAll();
 
 	Document doc;
-	int idx = 0;
-	doc.extract(data, idx, &doc.title, Strings::Title);
-	doc.extract(data, idx, &doc.documentRoot, Strings::Document);
+
+	if (argc > 1 && strcmp(argv[1], "-M") == 0) {
+		doc.parseSourceMarkdown(data);
+	} else {
+		int idx = 0;
+		doc.extract(data, idx, &doc.title, Strings::Title);
+		doc.extract(data, idx, &doc.documentRoot, Strings::Document);
+	}
 
 	doc.output();
 

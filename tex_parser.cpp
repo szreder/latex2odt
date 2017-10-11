@@ -49,6 +49,7 @@ namespace Highlight {
 	const QString Preprocessor = "hlppc";
 	const QString Standard = "hlstd";
 	const QString String = "hlstr";
+	const QString StringSubstitution = "hlipl";
 	const QString Type = "hlkwd";
 }
 
@@ -97,6 +98,7 @@ const QSet <QString> Fragment {
 	Highlight::Preprocessor,
 	Highlight::Standard,
 	Highlight::String,
+	Highlight::StringSubstitution,
 	Highlight::Type,
 };
 
@@ -597,6 +599,9 @@ void Document::parseSourceMarkdown(const QString &data)
 		if (s.startsWith("```")) {
 			addNode(&documentRoot, Node::Type::Tag, Strings::CodeStart);
 
+			QString language = s.right(s.length() - 3);
+			QStringList codeLines;
+
 			bool end = false;
 			do {
 				if (line == lines.count()) {
@@ -605,13 +610,32 @@ void Document::parseSourceMarkdown(const QString &data)
 				}
 				s = lines[line++];
 				end = s.startsWith("```");
-				if (!end) {
+				if (!end)
+					codeLines.append(s);
+			} while (!end);
+
+			if (language.isEmpty()) {
+				for (QString &l : codeLines) {
 					Node *codeLine = addNode(&documentRoot, Node::Type::Environment, Strings::CodeLine);
 					Node *lineContent = addNode(codeLine, Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
-					addEntities(s);
-					addNode(lineContent, Node::Type::Text, s);
+					addEntities(l);
+					addNode(lineContent, Node::Type::Text, l);
 				}
-			} while (!end);
+			} else {
+				QProcess highlight;
+				highlight.start("highlight", QString{"-O latex --replace-quotes -j 3 -z -V -f -t 4 --encoding=utf-8 --syntax=%1"}.arg(language).split(' '));
+				for (const QString &l : codeLines) {
+					highlight.write(l.toUtf8());
+					highlight.write("\n");
+				}
+				highlight.closeWriteChannel();
+				highlight.waitForFinished();
+				QByteArray output = highlight.readAllStandardOutput();
+				parseCtx.inCode = true;
+				int idx = 0;
+				parseSource(QString{output}, idx, &documentRoot, QString{});
+				parseCtx.inCode = false;
+			}
 			addNode(&documentRoot, Node::Type::Tag, Strings::CodeEnd);
 			continue;
 		}
@@ -698,6 +722,7 @@ QString entryText(const QString &s)
 		{Highlight::Preprocessor, "<text:span text:style-name=\"HighlightPreprocessor\">"},
 		{Highlight::Standard, "<text:span text:style-name=\"HighlightStandard\">"},
 		{Highlight::String, "<text:span text:style-name=\"HighlightString\">"},
+		{Highlight::StringSubstitution, "<text:span text:style-name=\"HighlightStringSubstitution\">"},
 		{Highlight::Type, "<text:span text:style-name=\"HighlightType\">"},
 	};
 
@@ -736,6 +761,7 @@ QString exitText(const QString &s)
 		{Highlight::Preprocessor, SpanEnd},
 		{Highlight::Standard, SpanEnd},
 		{Highlight::String, SpanEnd},
+		{Highlight::StringSubstitution, SpanEnd},
 		{Highlight::Type, SpanEnd},
 	};
 

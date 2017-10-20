@@ -1,8 +1,9 @@
 .PHONY : clean
 CXXFLAGS = -Wall -std=c++17 -fPIC
+BIN = odtgen
 
-latex2odt : tex_parser.cpp
-	g++ $(CXXFLAGS) -I /usr/include/qt5 -I /usr/include/qt5/QtCore -l Qt5Core tex_parser.cpp -o latex2odt
+$(BIN) : $(BIN).cpp
+	g++ $(CXXFLAGS) -I /usr/include/qt5 -I /usr/include/qt5/QtCore -l Qt5Core odtgen.cpp -o $@
 
 clean :
-	rm -f latex2odt
+	rm -f $(BIN)

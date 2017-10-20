@@ -10,6 +10,7 @@ namespace Strings {
 	const QString CodeEnd = "CodeEnd";
 	const QString CodeLine = "CodeLine";
 	const QString CodeStart = "CodeStart";
+	const QString CodeTilde = "sim";
 	const QString Document = "document";
 	const QString End = "end";
 	const QString Enumerate = "enumerate";
@@ -104,6 +105,7 @@ const QSet <QString> Fragment {
 
 const QSet <QString> Tag {
 	Strings::Backslash,
+	Strings::CodeTilde,
 	Strings::Item,
 	Strings::Ldots,
 	Strings::MakeTitle,
@@ -972,7 +974,7 @@ void Document::output() const
 					output << context.endCodeFrame();
 				} else if (n->value == Strings::Ldots) {
 					context.addText("…");
-				} else if (n->value == Strings::Tilde) {
+				} else if (n->value == Strings::Tilde || n->value == Strings::CodeTilde) {
 					context.addText("~");
 				} else if (n->value == Strings::Textbar) {
 					context.addText("|");

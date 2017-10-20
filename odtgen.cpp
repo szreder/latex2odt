@@ -420,6 +420,8 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 			} else if (Fragment.contains(token)) {
 				if (data[idx] == '}') {
 					++idx;
+					if (token == "mbox" && parseCtx.inCode && data[idx] == '\n')
+						++idx;
 					continue;
 				}
 
@@ -881,7 +883,7 @@ void Document::output() const
 		{
 			QString result;
 			if (inParagraph()) {
-				if (!paragraph.isEmpty()) {
+				if (!paragraph.isEmpty() || inCode) {
 					if (inCode)
 						paragraph.replace("    ", "<text:s text:c=\"4\"/>");
 

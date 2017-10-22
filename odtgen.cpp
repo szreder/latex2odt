@@ -27,6 +27,7 @@ namespace Strings {
 	const QString Section = "section";
 	const QString SourceCode = "sourcecodefile";
 	const QString Subsection = "subsection";
+	const QString Superscript = "superscript";
 	const QString TextBackslash = "textbackslash";
 	const QString Textbar = "textbar";
 	const QString TextTT = "texttt";
@@ -344,6 +345,7 @@ QString Document::getToken(const QString &data, int &idx)
 
 struct {
 	bool inCode = false;
+	bool inMathMode = false;
 	int braceCnt = 0;
 } parseCtx;
 
@@ -491,10 +493,36 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 				std::exit(1);
 			}
 		} else {
-			if (data[idx] == '{')
-				++parseCtx.braceCnt;
-			else if ((data[idx] != ' ' && data[idx] != '$') || !parseCtx.inCode) //ignore math mode for now
-				content += data[idx];
+			switch (data[idx].toLatin1()) {
+				case '{':
+					++parseCtx.braceCnt;
+					break;
+				case '$':
+					if (!parseCtx.inCode)
+						parseCtx.inMathMode = !parseCtx.inMathMode;
+					break;
+				case '^':
+					if (parseCtx.inMathMode) {
+						addText();
+						++idx;
+						Node *child = addNode(node, Node::Type::Fragment, Strings::Superscript);
+						if (data[idx] == '{') {
+							++idx;
+							parseSource(data, idx, child, "}");
+						} else {
+							addNode(child, Node::Type::Text, data[idx]);
+						}
+					} else {
+						content += data[idx];
+					}
+					break;
+				case ' ':
+					if (!parseCtx.inCode)
+						content += data[idx];
+					break;
+				default:
+					content += data[idx];
+			}
 			++idx;
 		}
 	}
@@ -711,6 +739,7 @@ QString entryText(const QString &s)
 		{Strings::Paragraph, "<text:p text:style-name=\"Paragraph\">"},
 		{Strings::Section, "<text:h text:style-name=\"Section\" text:outline-level=\"2\">"},
 		{Strings::Subsection, "<text:h text:style-name=\"Subsection\" text:outline-level=\"2\">"},
+		{Strings::Superscript, "<text:span text:style-name=\"Superscript\">"},
 		{Strings::Title, "<text:h text:style-name=\"Header_Logo\" text:outline-level=\"1\">"},
 		{Strings::TextTT, "<text:span text:style-name=\"Monospace\">"},
 
@@ -750,6 +779,7 @@ QString exitText(const QString &s)
 		{Strings::Paragraph, ParagraphEnd},
 		{Strings::Section, HeaderEnd},
 		{Strings::Subsection, HeaderEnd},
+		{Strings::Superscript, SpanEnd},
 		{Strings::Title, HeaderEnd},
 		{Strings::TextTT, SpanEnd},
 

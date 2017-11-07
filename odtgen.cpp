@@ -509,6 +509,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 						if (data[idx] == '{') {
 							++idx;
 							parseSource(data, idx, child, "}");
+							--idx;
 						} else {
 							addNode(child, Node::Type::Text, data[idx]);
 						}

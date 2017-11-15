@@ -1,70 +1,12 @@
 #include <QtCore>
 
+#include "Markup/Cpp.hpp"
+#include "Markup/Highlight.hpp"
+#include "Strings.hpp"
+#include "XmlGen.hpp"
+
 namespace {
 QTextStream debug_output{stderr};
-
-namespace Strings {
-	const QString Backslash = "backslash";
-	const QString Begin = "begin";
-	const QString BoldFace = "textbf";
-	const QString CodeEnd = "CodeEnd";
-	const QString CodeLine = "CodeLine";
-	const QString CodeStart = "CodeStart";
-	const QString CodeTilde = "sim";
-	const QString Document = "document";
-	const QString End = "end";
-	const QString Enumerate = "enumerate";
-	const QString Hspace = "hspace";
-	const QString Input = "input";
-	const QString Italic = "textit";
-	const QString Item = "item";
-	const QString Itemize = "itemize";
-	const QString Ldots = "ldots";
-	const QString MakeTitle = "maketitle";
-	const QString NormalFont = "normalfont";
-	const QString Paragraph = "paragraph";
-	const QString Quote = "dq";
-	const QString Section = "section";
-	const QString SourceCode = "sourcecodefile";
-	const QString Subsection = "subsection";
-	const QString Superscript = "superscript";
-	const QString TextBackslash = "textbackslash";
-	const QString Textbar = "textbar";
-	const QString TextTT = "texttt";
-	const QString TTFamily = "ttfamily";
-	const QString Tilde = "textasciitilde";
-	const QString Title = "title";
-	const QString Underscore = "textunderscore";
-	const QString Verbatim = "verbatim";
-}
-
-namespace Highlight {
-	const QString CommentBlock = "hlcom";
-	const QString CommentCpp = "hlslc";
-	const QString Escape = "hlesc";
-	const QString KeywordA = "hlkwa";
-	const QString KeywordB = "hlkwb";
-	const QString KeywordC = "hlkwc";
-	const QString NumberConstant = "hlnum";
-	const QString LineNumbering = "hllin";
-	const QString Operator = "hlopt";
-	const QString Preprocessor = "hlppc";
-	const QString Standard = "hlstd";
-	const QString String = "hlstr";
-	const QString StringSubstitution = "hlipl";
-	const QString Type = "hlkwd";
-}
-
-namespace Cpp {
-	const QString Cpp = "cpp";
-	const QString Decrement = "cppDec";
-	const QString Increment = "cppInc";
-}
-
-namespace Unicode {
-	const char *NoSpaceDontBreak = u8"\u2060";
-	const char *NonBreakingSpace = u8"\u00a0";
-}
 
 const QSet <QString> Environment {
 	Strings::Document,
@@ -121,10 +63,21 @@ const QSet <QString> Tag {
 	"indent",
 	"noindent",
 	"normalsize",
-
+/*
+	Cpp::AddAssign,
+	Cpp::And,
 	Cpp::Cpp,
 	Cpp::Decrement,
+	Cpp::Equal,
+	Cpp::GreaterEqual,
 	Cpp::Increment,
+	Cpp::LeftShift,
+	Cpp::LessEqual,
+	Cpp::NotEqual,
+	Cpp::Or,
+	Cpp::PtrAccess,
+	Cpp::RightShift,
+	Cpp::Scope,*/
 };
 
 bool isBlock(const QString &keyword)
@@ -489,8 +442,16 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 				}
 
 			} else {
-				qCritical() << QString{"Unhandled token: %1"}.arg(token);
-				std::exit(1);
+				const QString &text = Cpp::markup(token);
+				if (text.isEmpty()) {
+					qCritical() << QString{"Unhandled token: %1"}.arg(token);
+					std::exit(1);
+				}
+
+				addText();
+				addNode(node, Node::Type::Text, text);
+				if (data[idx] == '}')
+					++idx;
 			}
 		} else {
 			switch (data[idx].toLatin1()) {
@@ -728,81 +689,6 @@ void Document::output() const
 }
 */
 
-QString entryText(const QString &s)
-{
-	const QHash <QString, QString> EntryText {
-		{Strings::BoldFace, "<text:span text:style-name=\"Bold\">"},
-		{Strings::CodeLine, "<text:p text:style-name=\"CodeLine\">"},
-		{Strings::Enumerate, "<text:list text:style-name=\"Enumerate\">"},
-		{Strings::Italic, "<text:span text:style-name=\"Italic\">"},
-		{Strings::Item, "<text:list-item>"},
-		{Strings::Itemize, "<text:list>"},
-		{Strings::Paragraph, "<text:p text:style-name=\"Paragraph\">"},
-		{Strings::Section, "<text:h text:style-name=\"Section\" text:outline-level=\"2\">"},
-		{Strings::Subsection, "<text:h text:style-name=\"Subsection\" text:outline-level=\"2\">"},
-		{Strings::Superscript, "<text:span text:style-name=\"Superscript\">"},
-		{Strings::Title, "<text:h text:style-name=\"Header_Logo\" text:outline-level=\"1\">"},
-		{Strings::TextTT, "<text:span text:style-name=\"Monospace\">"},
-
-		{Highlight::CommentBlock, "<text:span text:style-name=\"HighlightComment\">"},
-		{Highlight::CommentCpp, "<text:span text:style-name=\"HighlightComment\">"},
-		{Highlight::Escape, "<text:span text:style-name=\"HighlightEscape\">"},
-		{Highlight::KeywordA, "<text:span text:style-name=\"HighlightKeywordA\">"},
-		{Highlight::KeywordB, "<text:span text:style-name=\"HighlightKeywordB\">"},
-		{Highlight::KeywordC, "<text:span text:style-name=\"HighlightKeywordC\">"},
-		{Highlight::LineNumbering, "<text:span text:style-name=\"HighlightLineNumbering\">"},
-		{Highlight::NumberConstant, "<text:span text:style-name=\"HighlightNumberConstant\">"},
-		{Highlight::Operator, "<text:span text:style-name=\"HighlightOperator\">"},
-		{Highlight::Preprocessor, "<text:span text:style-name=\"HighlightPreprocessor\">"},
-		{Highlight::Standard, "<text:span text:style-name=\"HighlightStandard\">"},
-		{Highlight::String, "<text:span text:style-name=\"HighlightString\">"},
-		{Highlight::StringSubstitution, "<text:span text:style-name=\"HighlightStringSubstitution\">"},
-		{Highlight::Type, "<text:span text:style-name=\"HighlightType\">"},
-	};
-
-	return EntryText.value(s);
-}
-
-QString exitText(const QString &s)
-{
-	static const QString HeaderEnd = "</text:h>";
-	static const QString ListEnd = "</text:list>";
-	static const QString ParagraphEnd = "</text:p>";
-	static const QString SpanEnd = "</text:span>";
-
-	const QHash <QString, QString> ExitText {
-		{Strings::BoldFace, SpanEnd},
-		{Strings::CodeLine, ParagraphEnd},
-		{Strings::Italic, SpanEnd},
-		{Strings::Enumerate, ListEnd},
-		{Strings::Item, "</text:list-item>"},
-		{Strings::Itemize, ListEnd},
-		{Strings::Paragraph, ParagraphEnd},
-		{Strings::Section, HeaderEnd},
-		{Strings::Subsection, HeaderEnd},
-		{Strings::Superscript, SpanEnd},
-		{Strings::Title, HeaderEnd},
-		{Strings::TextTT, SpanEnd},
-
-		{Highlight::CommentBlock, SpanEnd},
-		{Highlight::CommentCpp, SpanEnd},
-		{Highlight::Escape, SpanEnd},
-		{Highlight::KeywordA, SpanEnd},
-		{Highlight::KeywordB, SpanEnd},
-		{Highlight::KeywordC, SpanEnd},
-		{Highlight::LineNumbering, SpanEnd},
-		{Highlight::NumberConstant, SpanEnd},
-		{Highlight::Operator, SpanEnd},
-		{Highlight::Preprocessor, SpanEnd},
-		{Highlight::Standard, SpanEnd},
-		{Highlight::String, SpanEnd},
-		{Highlight::StringSubstitution, SpanEnd},
-		{Highlight::Type, SpanEnd},
-	};
-
-	return ExitText.value(s);
-};
-
 void Document::output() const
 {
 	QTextStream output{stdout};
@@ -1009,19 +895,6 @@ void Document::output() const
 					context.addText("~");
 				} else if (n->value == Strings::Textbar) {
 					context.addText("|");
-				} else if (n->value == Cpp::Cpp) {
-					context << entryText(Strings::BoldFace) << "C" << exitText(Strings::BoldFace)
-						<< entryText(Strings::TextTT) << "+"
-						<< Unicode::NoSpaceDontBreak
-						<< "+" << exitText(Strings::TextTT);
-				} else if (n->value == Cpp::Decrement) {
-					context << entryText(Strings::TextTT) << "-" << exitText(Strings::TextTT)
-						<< Unicode::NoSpaceDontBreak
-						<< entryText(Strings::TextTT) << "-" << exitText(Strings::TextTT);
-				} else if (n->value == Cpp::Increment) {
-					context << entryText(Strings::TextTT) << "+" << exitText(Strings::TextTT)
-						<< Unicode::NoSpaceDontBreak
-						<< entryText(Strings::TextTT) << "+" << exitText(Strings::TextTT);
 				}
 
 				break;

@@ -13,6 +13,7 @@ const QString GreaterEqual = "cppGreaterEqual";
 const QString Increment = "cppInc";
 const QString LeftShift = "cppLeftShift";
 const QString LessEqual = "cppLessEqual";
+const QString MinusAssign = "cppMinusAssign";
 const QString NotEqual = "cppNotEqual";
 const QString Or = "cppOr";
 const QString PtrAccess = "cppPtrAccess";
@@ -60,6 +61,10 @@ const QString & markup(const QString &tag)
 
 		result[LessEqual] = entryText(Strings::TextTT)
 			+ "&lt;" + Unicode::NoSpaceDontBreak + '='
+			+ exitText(Strings::TextTT);
+
+		result[MinusAssign] = entryText(Strings::TextTT)
+			+ '-' + Unicode::NoSpaceDontBreak + '='
 			+ exitText(Strings::TextTT);
 
 		result[NotEqual] = entryText(Strings::TextTT)

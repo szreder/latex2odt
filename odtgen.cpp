@@ -36,6 +36,7 @@ const QSet <QString> Fragment {
 	Highlight::KeywordA,
 	Highlight::KeywordB,
 	Highlight::KeywordC,
+	Highlight::IncludeQuote,
 	Highlight::LineNumbering,
 	Highlight::NumberConstant,
 	Highlight::Operator,

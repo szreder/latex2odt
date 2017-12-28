@@ -1,9 +1,13 @@
 .PHONY : clean
 CXXFLAGS = -Wall -std=c++17 -fPIC
 BIN = odtgen
+OBJS = AST.o odtgen.o Markup/Cpp.o Strings.o XmlGen.o
 
-$(BIN) : $(BIN).cpp
-	g++ $(CXXFLAGS) -I /usr/include/qt5 -I /usr/include/qt5/QtCore -l Qt5Core odtgen.cpp -o $@
+$(BIN) : $(OBJS)
+	g++ -o $@ $^ -l Qt5Core
+
+%.o : %.cpp
+	g++ $(CXXFLAGS) -c $^ -o $@ -I . -I /usr/include/qt5 -I /usr/include/qt5/QtCore
 
 clean :
 	rm -f $(BIN)

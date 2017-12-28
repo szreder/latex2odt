@@ -2,84 +2,12 @@
 
 #include "Markup/Cpp.hpp"
 #include "Markup/Highlight.hpp"
+#include "AST.hpp"
 #include "Strings.hpp"
 #include "XmlGen.hpp"
 
 namespace {
 QTextStream debug_output{stderr};
-
-const QSet <QString> Environment {
-	Strings::Document,
-	Strings::Enumerate,
-	Strings::Itemize,
-	Strings::Verbatim,
-	"center",
-};
-
-const QSet <QString> Fragment {
-	Strings::BoldFace,
-	Strings::Hspace,
-	Strings::Input,
-	Strings::Italic,
-	Strings::Section,
-	Strings::SourceCode,
-	Strings::Subsection,
-	Strings::TextTT,
-	Strings::Title,
-	"hspace*",
-	"mbox",
-	"textsf",
-
-	Highlight::CommentBlock,
-	Highlight::CommentCpp,
-	Highlight::Escape,
-	Highlight::KeywordA,
-	Highlight::KeywordB,
-	Highlight::KeywordC,
-	Highlight::IncludeQuote,
-	Highlight::LineNumbering,
-	Highlight::NumberConstant,
-	Highlight::Operator,
-	Highlight::Preprocessor,
-	Highlight::Standard,
-	Highlight::String,
-	Highlight::StringSubstitution,
-	Highlight::Type,
-};
-
-const QSet <QString> Tag {
-	Strings::Backslash,
-	Strings::CodeTilde,
-	Strings::Item,
-	Strings::Ldots,
-	Strings::MakeTitle,
-	Strings::NormalFont,
-	Strings::Quote,
-	Strings::Textbar,
-	Strings::TextBackslash,
-	Strings::Tilde,
-	Strings::TTFamily,
-	Strings::Underscore,
-	"fill",
-	"indent",
-	"noindent",
-	"normalsize",
-/*
-	Cpp::AddAssign,
-	Cpp::And,
-	Cpp::Cpp,
-	Cpp::Decrement,
-	Cpp::Equal,
-	Cpp::GreaterEqual,
-	Cpp::Increment,
-	Cpp::LeftShift,
-	Cpp::LessEqual,
-	Cpp::NotEqual,
-	Cpp::Or,
-	Cpp::PtrAccess,
-	Cpp::RightShift,
-	Cpp::Scope,*/
-};
 
 bool isBlock(const QString &keyword)
 {
@@ -150,63 +78,6 @@ inline QString generateEnd(const QString &s)
 	}
 
 	return QString{};
-}
-
-struct Node {
-	enum class Type {
-		Invalid,
-		Environment,
-		Fragment,
-		Tag,
-		Text,
-	};
-
-	Node() = default;
-	Node(Type type, const QString &value) : type{type}, value{value} {}
-
-	static Type typeFromName(const QString &name);
-	QString toString() const;
-
-	Type type;
-	QString value;
-	bool endParagraph = false;
-	QVector <Node *> children;
-};
-
-Node::Type Node::typeFromName(const QString &name)
-{
-	if (Environment.contains(name))
-		return Type::Environment;
-	if (Fragment.contains(name))
-		return Type::Fragment;
-	if (Tag.contains(name))
-		return Type::Tag;
-
-	qCritical() << QString{"Unknown type for '%1'"}.arg(name);
-	std::exit(1);
-	return Type::Invalid;
-}
-
-QString Node::toString() const
-{
-	QString typeString = "Invalid";
-	switch (type) {
-		case Type::Environment:
-			typeString = "Environment";
-			break;
-		case Type::Fragment:
-			typeString = "Fragment";
-			break;
-		case Type::Tag:
-			typeString = "Tag";
-			break;
-		case Type::Text:
-			typeString = "Text";
-			break;
-		default:
-			break;
-	}
-	return QString{"type = %1, value = _%2_, endParagraph = %3"}.arg(typeString).arg(value).arg(endParagraph);
 }
 
 struct Document {

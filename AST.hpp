@@ -64,7 +64,7 @@ const QSet <QString> Tag {
 };
 
 struct Node {
-	enum class Type {
+	enum class Type : quint8 {
 		Invalid,
 		Environment,
 		Fragment,

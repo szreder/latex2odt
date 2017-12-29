@@ -10,4 +10,4 @@ $(BIN) : $(OBJS)
 	g++ $(CXXFLAGS) -c $^ -o $@ -I . -I /usr/include/qt5 -I /usr/include/qt5/QtCore
 
 clean :
-	rm -f $(BIN)
+	rm -f $(BIN) $(OBJS)

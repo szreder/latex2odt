@@ -4,38 +4,38 @@
 
 namespace Strings {
 
-const QString Backslash = "backslash";
-const QString Begin = "begin";
-const QString BoldFace = "textbf";
-const QString CodeEnd = "CodeEnd";
-const QString CodeLine = "CodeLine";
-const QString CodeStart = "CodeStart";
-const QString CodeTilde = "sim";
-const QString Document = "document";
-const QString End = "end";
-const QString Enumerate = "enumerate";
-const QString Hspace = "hspace";
-const QString Input = "input";
-const QString Italic = "textit";
-const QString Item = "item";
-const QString Itemize = "itemize";
-const QString Ldots = "ldots";
-const QString MakeTitle = "maketitle";
-const QString NormalFont = "normalfont";
-const QString Paragraph = "paragraph";
-const QString Quote = "dq";
-const QString Section = "section";
-const QString SourceCode = "sourcecodefile";
-const QString Subsection = "subsection";
-const QString Superscript = "superscript";
-const QString TextBackslash = "textbackslash";
-const QString Textbar = "textbar";
-const QString TextTT = "texttt";
-const QString TTFamily = "ttfamily";
-const QString Tilde = "textasciitilde";
-const QString Title = "title";
-const QString Underscore = "textunderscore";
-const QString Verbatim = "verbatim";
+extern const QString Backslash;
+extern const QString Begin;
+extern const QString BoldFace;
+extern const QString CodeEnd;
+extern const QString CodeLine;
+extern const QString CodeStart;
+extern const QString CodeTilde;
+extern const QString Document;
+extern const QString End;
+extern const QString Enumerate;
+extern const QString Hspace;
+extern const QString Input;
+extern const QString Italic;
+extern const QString Item;
+extern const QString Itemize;
+extern const QString Ldots;
+extern const QString MakeTitle;
+extern const QString NormalFont;
+extern const QString Paragraph;
+extern const QString Quote;
+extern const QString Section;
+extern const QString SourceCode;
+extern const QString Subsection;
+extern const QString Superscript;
+extern const QString TextBackslash;
+extern const QString Textbar;
+extern const QString TextTT;
+extern const QString TTFamily;
+extern const QString Tilde;
+extern const QString Title;
+extern const QString Underscore;
+extern const QString Verbatim;
 
 } // Strings
 
@@ -44,4 +44,4 @@ namespace Unicode {
 extern const char *NoSpaceDontBreak;
 extern const char *NonBreakingSpace;
 
-} // Strings
+} // Unicode

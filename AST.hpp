@@ -20,7 +20,7 @@ struct Node {
 	};
 
 	Node() = default;
-	Node(Type type, const QString &value) : type{type}, value{value} {}
+	Node(Type type, QString &&value) : type{type}, value{std::move(value)} {}
 	Node(Node &&) = default;
 	Node & operator = (Node &&) = default;
 
@@ -30,5 +30,5 @@ struct Node {
 	Type type;
 	QString value;
 	bool endParagraph = false;
-	Vector <Node *> children;
+	Vector <Node> children;
 };

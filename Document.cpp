@@ -1,9 +1,18 @@
+#include <unordered_set>
+
 #include "Markup/Cpp.hpp"
 
 #include "Document.hpp"
 #include "Strings.hpp"
 #include "Vector.hpp"
 #include "XmlGen.hpp"
+
+namespace std {
+template <>
+struct hash<QString> {
+	size_t operator () (const QString &s) const noexcept { return qHash(s); }
+};
+}
 
 namespace {
 
@@ -16,7 +25,7 @@ void addEntities(QString &text)
 
 bool isBlock(const QString &keyword)
 {
-	static const Vector <QString> Keywords {
+	static const std::unordered_set <QString> Keywords {
 		Strings::CodeLine,
 		Strings::Paragraph,
 		Strings::Section,
@@ -24,27 +33,27 @@ bool isBlock(const QString &keyword)
 		Strings::Title,
 	};
 
-	return Keywords.contains(keyword);
+	return Keywords.find(keyword) != Keywords.end();
 }
 
 bool isList(const QString &keyword)
 {
-	static const Vector <QString> Keywords {
+	static const std::unordered_set <QString> Keywords {
 		Strings::Enumerate,
 		Strings::Itemize,
 	};
 
-	return Keywords.contains(keyword);
+	return Keywords.find(keyword) != Keywords.end();
 }
 
 bool ignore(const QString &keyword)
 {
-	static const Vector <QString> Keywords {
+	static const std::unordered_set <QString> Keywords {
 		Strings::Input,
 		Strings::SourceCode,
 	};
 
-	return Keywords.contains(keyword);
+	return Keywords.find(keyword) != Keywords.end();
 }
 
 const Vector <QChar> SpecialChars {
@@ -91,11 +100,16 @@ inline QString generateEnd(const QString &s)
 
 }
 
-Node * Document::addNode(Node *parent, Node::Type type, const QString &value)
+Node & Document::addNode(Node &parent, Node::Type type, const QString &value)
 {
-	Node *child = new Node{type, value};
-	parent->children.push_back(child);
-	return child;
+	QString temp{value};
+	return addNode(parent, type, std::move(temp));
+}
+
+Node & Document::addNode(Node &parent, Node::Type type, QString &&value)
+{
+	parent.children.push_back(Node{type, std::move(value)});
+	return parent.children.back();
 }
 
 inline void Document::ensureData(const QString &data, int idx, int needBytes) const
@@ -106,7 +120,7 @@ inline void Document::ensureData(const QString &data, int idx, int needBytes) co
 	}
 }
 
-void Document::extract(const QString &data, int &idx, Node *root, const QString &token)
+void Document::extract(const QString &data, int &idx, Node &root, const QString &token)
 {
 	const QString Pattern = generateBegin(token);
 	idx = data.indexOf(Pattern, idx);
@@ -116,7 +130,7 @@ void Document::extract(const QString &data, int &idx, Node *root, const QString 
 	}
 	idx += Pattern.length();
 
-	*root = Node{Node::typeFromName(token), token};
+	root = Node{Node::typeFromName(token), QString{token}};
 	parseSource(data, idx, root, generateEnd(token));
 }
 
@@ -155,12 +169,12 @@ struct {
 	int braceCnt = 0;
 } parseCtx;
 
-void Document::parseSource(const QString &data, int &idx, Node *node, const QString &endMarker)
+void Document::parseSource(const QString &data, int &idx, Node &node, const QString &endMarker)
 {
 	qDebug() << QString{"parseSource called, idx = %1, endMarker = %2"}.arg(idx).arg(endMarker);
 	QString content;
 
-	auto addText = [this, &content, node](bool paragraph = false) {
+	auto addText = [this, &content, &node](bool paragraph = false) {
 		qDebug() << QString{"addText: parseCtx.inCode = %1, content = _%2_"}.arg(parseCtx.inCode).arg(content);
 		if (!parseCtx.inCode && content.trimmed().isEmpty() && paragraph == false) {
 			content.clear();
@@ -182,12 +196,12 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 		}
 
 		for (int i = 0; i < contentList.count() - 1; ++i) {
-			Node *child = addNode(node, Node::Type::Text, contentList[i].replace('\n', ' '));
-			child->endParagraph = true;
+			Node &child = addNode(node, Node::Type::Text, contentList[i].replace('\n', ' '));
+			child.endParagraph = true;
 		}
 
-		Node *child = addNode(node, Node::Type::Text, contentList.back().replace('\n', ' '));
-		child->endParagraph = paragraph;
+		Node &child = addNode(node, Node::Type::Text, contentList.back().replace('\n', ' '));
+		child.endParagraph = paragraph;
 		content.clear();
 	};
 
@@ -242,15 +256,15 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 				}
 
 				addText();
-				Node *child = addNode(node, Node::Type::Fragment, token);
+				Node &child = addNode(node, Node::Type::Fragment, token);
 				qDebug() << QString{"token = %1, calling parseSource with endMarker = }, data[idx] = %2"}.arg(token).arg(data[idx]);
 				parseSource(data, idx, child, "}");
 				if (token == Strings::SourceCode) {
-					if (child->children.count() != 1) {
-						qCritical() << QString{"sourcecodefile node has %1 descendants, expected 1"}.arg(node->children.count());
+					if (child.children.count() != 1) {
+						qCritical() << QString{"sourcecodefile node has %1 descendants, expected 1"}.arg(node.children.count());
 						std::exit(1);
 					}
-					const QString &filename = child->children.front()->value + ".tex";
+					const QString &filename = child.children.front().value + ".tex";
 					QFile sourceFile{filename};
 					if (!sourceFile.open(QIODevice::ReadOnly)) {
 						qCritical() << QString{"unable to open sourcecodefile: %1"}.arg(filename);
@@ -282,7 +296,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 				}
 
 				if (isBegin) {
-					Node *child = addNode(node, Node::Type::Environment, envName);
+					Node &child = addNode(node, Node::Type::Environment, envName);
 					qDebug() << QString{"environ = %1, calling parseSource with endMarker = %2"}.arg(envName).arg(generateEnd(envName));
 					parseSource(data, idx, child, generateEnd(envName));
 				} else {
@@ -319,7 +333,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 					if (parseCtx.inMathMode) {
 						addText();
 						++idx;
-						Node *child = addNode(node, Node::Type::Fragment, Strings::Superscript);
+						Node &child = addNode(node, Node::Type::Fragment, Strings::Superscript);
 						if (data[idx] == '{') {
 							++idx;
 							parseSource(data, idx, child, "}");
@@ -343,7 +357,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 	}
 }
 
-void Document::parseSourceMarkdown(const QString &data, int &idx, Node *node, const QString &endMarker)
+void Document::parseSourceMarkdown(const QString &data, int &idx, Node &node, const QString &endMarker)
 {
 	static const QHash <QChar, QString> FragmentMap {
 		{'*', Strings::BoldFace},
@@ -352,14 +366,14 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node *node, co
 
 	QString content;
 
-	auto addText = [this, &content, node]() {
+	auto addText = [this, &content, &node]() {
 		if (content.isEmpty())
 			return;
 		content.replace("&", "&amp;");
 		content.replace("<", "&lt;");
 		content.replace(">", "&gt;");
 
-		addNode(node, Node::Type::Text, content);
+		addNode(node, Node::Type::Text, std::move(content));
 		content.clear();
 	};
 
@@ -384,7 +398,7 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node *node, co
 				++endUrl;
 			} while (data[endUrl] != ')');
 
-			Node *urlNode = addNode(node, Node::Type::Fragment, Strings::TextTT);
+			Node &urlNode = addNode(node, Node::Type::Fragment, Strings::TextTT);
 			addNode(urlNode, Node::Type::Text, data.mid(idx, endUrl - idx));
 
 			idx = endUrl + 1;
@@ -393,7 +407,7 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node *node, co
 
 		if (!parseCtx.inCode && FragmentMap.contains(current)) {
 			addText();
-			Node *child = addNode(node, Node::Type::Fragment, FragmentMap[current]);
+			Node &child = addNode(node, Node::Type::Fragment, FragmentMap[current]);
 			if (current == '`')
 				parseCtx.inCode = true;
 			parseSourceMarkdown(data, idx, child, current);
@@ -412,10 +426,10 @@ void Document::parseSourceMarkdown(const QString &data)
 	QStringList lines = data.split('\n');
 
 	{
-		Node *t = addNode(&documentRoot, Node::Type::Fragment, Strings::Title);
+		Node &t = addNode(documentRoot, Node::Type::Fragment, Strings::Title);
 		int idx = 1;
 		parseSourceMarkdown(lines[0], idx, t, QString{});
-		addNode(&documentRoot, Node::Type::Tag, Strings::MakeTitle);
+		addNode(documentRoot, Node::Type::Tag, Strings::MakeTitle);
 	}
 
 	int line = 1;
@@ -428,7 +442,7 @@ void Document::parseSourceMarkdown(const QString &data)
 			continue;
 
 		if (s.startsWith("-")) {
-			Node *list = addNode(&documentRoot, Node::Type::Environment, Strings::Itemize);
+			Node &list = addNode(documentRoot, Node::Type::Environment, Strings::Itemize);
 
 			while (s.startsWith("-")) {
 				addNode(list, Node::Type::Tag, Strings::Item);
@@ -444,7 +458,7 @@ void Document::parseSourceMarkdown(const QString &data)
 		}
 
 		if (s.startsWith("```")) {
-			addNode(&documentRoot, Node::Type::Tag, Strings::CodeStart);
+			addNode(documentRoot, Node::Type::Tag, Strings::CodeStart);
 
 			QString language = s.right(s.length() - 3);
 			QStringList codeLines;
@@ -463,8 +477,8 @@ void Document::parseSourceMarkdown(const QString &data)
 
 			if (language.isEmpty()) {
 				for (QString &l : codeLines) {
-					Node *codeLine = addNode(&documentRoot, Node::Type::Environment, Strings::CodeLine);
-					Node *lineContent = addNode(codeLine, Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
+					Node &codeLine = addNode(documentRoot, Node::Type::Environment, Strings::CodeLine);
+					Node &lineContent = addNode(codeLine, Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
 					addEntities(l);
 					addNode(lineContent, Node::Type::Text, l);
 				}
@@ -480,14 +494,13 @@ void Document::parseSourceMarkdown(const QString &data)
 				QByteArray output = highlight.readAllStandardOutput();
 				parseCtx.inCode = true;
 				int idx = 0;
-				parseSource(QString{output}, idx, &documentRoot, QString{});
+				parseSource(QString{output}, idx, documentRoot, QString{});
 				parseCtx.inCode = false;
 			}
-			addNode(&documentRoot, Node::Type::Tag, Strings::CodeEnd);
+			addNode(documentRoot, Node::Type::Tag, Strings::CodeEnd);
 			continue;
 		}
 
-		Node *n;
 		const char *envName;
 		int hashSymbolCnt = 0;
 		while (hashSymbolCnt < s.length() && s[hashSymbolCnt] == '#')
@@ -501,7 +514,7 @@ void Document::parseSourceMarkdown(const QString &data)
 			envName = Strings::Paragraph;
 		}
 
-		n = addNode(&documentRoot, Node::Type::Environment, envName);
+		Node &n = addNode(documentRoot, Node::Type::Environment, envName);
 		int idx = hashSymbolCnt;
 		parseSourceMarkdown(s, idx, n, QString{});
 	}
@@ -649,12 +662,12 @@ void Document::output() const
 
 	} context;
 
-	std::function <void (const Node *)> doOutput = [this, &output, &context, &doOutput](const Node *n){
-		if (n->type != Node::Type::Text && ignore(n->value))
+	std::function <void (const Node &)> doOutput = [this, &output, &context, &doOutput](const Node &n){
+		if (n.type != Node::Type::Text && ignore(n.value))
 			return;
 
-		auto outputMode = n->type;
-		if (n->type == Node::Type::Fragment && n->value == Strings::Title)
+		auto outputMode = n.type;
+		if (n.type == Node::Type::Fragment && n.value == Strings::Title)
 			outputMode = Node::Type::Environment;
 
 		switch (outputMode) {
@@ -662,15 +675,15 @@ void Document::output() const
 				if (context.inParagraph())
 					output << context.pop();
 				int level;
-				output << context.push(n->value, &level);
-				for (const Node *child : n->children)
+				output << context.push(n.value, &level);
+				for (const Node &child : n.children)
 					doOutput(child);
 				output << context.pop(level);
 				break;
 			}
 			case Node::Type::Fragment: {
 				const bool inParagraph = context.inParagraph();
-				const bool isBlock = ::isBlock(n->value);
+				const bool isBlock = ::isBlock(n.value);
 
 				if (inParagraph && isBlock)
 					output << context.pop();
@@ -678,40 +691,40 @@ void Document::output() const
 					output << context.push(Strings::Paragraph);
 
 				if (isBlock)
-					output << context.push(n->value);
+					output << context.push(n.value);
 				else
-					context.addText(entryText(n->value));
+					context.addText(entryText(n.value));
 
-				for (const Node *child : n->children)
+				for (const Node &child : n.children)
 					doOutput(child);
 
 				if (isBlock)
 					output << context.pop();
 				else
-					context.addText(exitText(n->value));
+					context.addText(exitText(n.value));
 
 				break;
 			}
 			case Node::Type::Tag:
-				if (n->value == Strings::MakeTitle) {
+				if (n.value == Strings::MakeTitle) {
 					auto oldctx = context;
 					context.reset();
-					doOutput(&this->title);
+					doOutput(this->title);
 					context = oldctx;
-				} else if (n->value == Strings::Item) {
+				} else if (n.value == Strings::Item) {
 					output << context.pop(context.listLevels.back() + 1);
 					output << context.push(Strings::Item);
-				} else if (n->value == Strings::Underscore) {
+				} else if (n.value == Strings::Underscore) {
 					context.addText("_");
-				} else if (n->value == Strings::CodeStart) {
+				} else if (n.value == Strings::CodeStart) {
 					output << context.startCodeFrame();
-				} else if (n->value == Strings::CodeEnd) {
+				} else if (n.value == Strings::CodeEnd) {
 					output << context.endCodeFrame();
-				} else if (n->value == Strings::Ldots) {
+				} else if (n.value == Strings::Ldots) {
 					context.addText("…");
-				} else if (n->value == Strings::Tilde || n->value == Strings::CodeTilde) {
+				} else if (n.value == Strings::Tilde || n.value == Strings::CodeTilde) {
 					context.addText("~");
-				} else if (n->value == Strings::Textbar) {
+				} else if (n.value == Strings::Textbar) {
 					context.addText("|");
 				}
 
@@ -720,18 +733,18 @@ void Document::output() const
 				if (!context.inParagraph())
 					output << context.push(Strings::Paragraph);
 
-				context.addText(n->value);
+				context.addText(n.value);
 
-				if (n->endParagraph)
+				if (n.endParagraph)
 					output << context.pop();
 				break;
 			default:
-				qCritical() << QString{"Uknown type of node: %1"}.arg(static_cast<int>(n->type));
+				qCritical() << QString{"Uknown type of node: %1"}.arg(static_cast<int>(n.type));
 				std::exit(1);
 		}
 	};
 
-	doOutput(&documentRoot);
+	doOutput(documentRoot);
 
 	while (!context.empty())
 		output << context.pop();

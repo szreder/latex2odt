@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 		doc.parseSourceMarkdown(data);
 	} else {
 		int idx = 0;
-		doc.extract(data, idx, &doc.title, Strings::Title);
-		doc.extract(data, idx, &doc.documentRoot, Strings::Document);
+		doc.extract(data, idx, doc.title, Strings::Title);
+		doc.extract(data, idx, doc.documentRoot, Strings::Document);
 	}
 
 	doc.output();

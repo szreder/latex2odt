@@ -66,7 +66,7 @@ static inline constexpr uint qHash(const Node::Type &t)
 Node::Type Node::typeFromName(const QString &name)
 {
 	using TypePair = QPair <const QSet <QString> *, Node::Type>;
-	static const QVector <TypePair> TypeVector {
+	static const Vector <TypePair> TypeVector {
 		TypePair{&Environment, Type::Environment},
 		{&Fragment, Type::Fragment},
 		{&Tag, Type::Tag},

@@ -2,6 +2,7 @@
 
 #include "Document.hpp"
 #include "Strings.hpp"
+#include "Vector.hpp"
 #include "XmlGen.hpp"
 
 namespace {
@@ -15,7 +16,7 @@ void addEntities(QString &text)
 
 bool isBlock(const QString &keyword)
 {
-	static const QVector <QString> Keywords {
+	static const Vector <QString> Keywords {
 		Strings::CodeLine,
 		Strings::Paragraph,
 		Strings::Section,
@@ -28,7 +29,7 @@ bool isBlock(const QString &keyword)
 
 bool isList(const QString &keyword)
 {
-	static const QVector <QString> Keywords {
+	static const Vector <QString> Keywords {
 		Strings::Enumerate,
 		Strings::Itemize,
 	};
@@ -38,7 +39,7 @@ bool isList(const QString &keyword)
 
 bool ignore(const QString &keyword)
 {
-	static const QVector <QString> Keywords {
+	static const Vector <QString> Keywords {
 		Strings::Input,
 		Strings::SourceCode,
 	};
@@ -46,7 +47,7 @@ bool ignore(const QString &keyword)
 	return Keywords.contains(keyword);
 }
 
-const QVector <QChar> SpecialChars {
+const Vector <QChar> SpecialChars {
 	'\'',
 	'{',
 	'}',
@@ -93,7 +94,7 @@ inline QString generateEnd(const QString &s)
 Node * Document::addNode(Node *parent, Node::Type type, const QString &value)
 {
 	Node *child = new Node{type, value};
-	parent->children.append(child);
+	parent->children.push_back(child);
 	return child;
 }
 
@@ -249,7 +250,7 @@ void Document::parseSource(const QString &data, int &idx, Node *node, const QStr
 						qCritical() << QString{"sourcecodefile node has %1 descendants, expected 1"}.arg(node->children.count());
 						std::exit(1);
 					}
-					const QString &filename = child->children[0]->value + ".tex";
+					const QString &filename = child->children.front()->value + ".tex";
 					QFile sourceFile{filename};
 					if (!sourceFile.open(QIODevice::ReadOnly)) {
 						qCritical() << QString{"unable to open sourcecodefile: %1"}.arg(filename);

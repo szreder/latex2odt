@@ -2,38 +2,38 @@
 
 namespace Strings {
 
-const QString Backslash = "backslash";
-const QString Begin = "begin";
-const QString BoldFace = "textbf";
-const QString CodeEnd = "CodeEnd";
-const QString CodeLine = "CodeLine";
-const QString CodeStart = "CodeStart";
-const QString CodeTilde = "sim";
-const QString Document = "document";
-const QString End = "end";
-const QString Enumerate = "enumerate";
-const QString Hspace = "hspace";
-const QString Input = "input";
-const QString Italic = "textit";
-const QString Item = "item";
-const QString Itemize = "itemize";
-const QString Ldots = "ldots";
-const QString MakeTitle = "maketitle";
-const QString NormalFont = "normalfont";
-const QString Paragraph = "paragraph";
-const QString Quote = "dq";
-const QString Section = "section";
-const QString SourceCode = "sourcecodefile";
-const QString Subsection = "subsection";
-const QString Superscript = "superscript";
-const QString TextBackslash = "textbackslash";
-const QString Textbar = "textbar";
-const QString TextTT = "texttt";
-const QString TTFamily = "ttfamily";
-const QString Tilde = "textasciitilde";
-const QString Title = "title";
-const QString Underscore = "textunderscore";
-const QString Verbatim = "verbatim";
+const char *Backslash = "backslash";
+const char *Begin = "begin";
+const char *BoldFace = "textbf";
+const char *CodeEnd = "CodeEnd";
+const char *CodeLine = "CodeLine";
+const char *CodeStart = "CodeStart";
+const char *CodeTilde = "sim";
+const char *Document = "document";
+const char *End = "end";
+const char *Enumerate = "enumerate";
+const char *Hspace = "hspace";
+const char *Input = "input";
+const char *Italic = "textit";
+const char *Item = "item";
+const char *Itemize = "itemize";
+const char *Ldots = "ldots";
+const char *MakeTitle = "maketitle";
+const char *NormalFont = "normalfont";
+const char *Paragraph = "paragraph";
+const char *Quote = "dq";
+const char *Section = "section";
+const char *SourceCode = "sourcecodefile";
+const char *Subsection = "subsection";
+const char *Superscript = "superscript";
+const char *TextBackslash = "textbackslash";
+const char *Textbar = "textbar";
+const char *TextTT = "texttt";
+const char *TTFamily = "ttfamily";
+const char *Tilde = "textasciitilde";
+const char *Title = "title";
+const char *Underscore = "textunderscore";
+const char *Verbatim = "verbatim";
 
 } // Strings
 

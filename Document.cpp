@@ -487,20 +487,20 @@ void Document::parseSourceMarkdown(const QString &data)
 		}
 
 		Node *n;
-		const QString *envName;
+		const char *envName;
 		int hashSymbolCnt = 0;
 		while (hashSymbolCnt < s.length() && s[hashSymbolCnt] == '#')
 			++hashSymbolCnt;
 
 		if (hashSymbolCnt == 1 || hashSymbolCnt == 2) {
-			envName = &Strings::Section;
+			envName = Strings::Section;
 		} else if (hashSymbolCnt == 3 || hashSymbolCnt == 4) {
-			envName = &Strings::Subsection;
+			envName = Strings::Subsection;
 		} else {
-			envName = &Strings::Paragraph;
+			envName = Strings::Paragraph;
 		}
 
-		n = addNode(&documentRoot, Node::Type::Environment, *envName);
+		n = addNode(&documentRoot, Node::Type::Environment, envName);
 		int idx = hashSymbolCnt;
 		parseSourceMarkdown(s, idx, n, QString{});
 	}

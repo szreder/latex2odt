@@ -84,7 +84,7 @@ Node::Type Node::typeFromName(const QString &name)
 
 QString Node::toString() const
 {
-	static const QHash <Node::Type, QString> TypeHash {
+	static const QHash <Node::Type, const char *> TypeHash {
 		{Type::Environment, "Environment"},
 		{Type::Fragment, "Fragment"},
 		{Type::Tag, "Tag"},

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QtCore>
-
 namespace Strings {
 
 extern const char *Backslash;

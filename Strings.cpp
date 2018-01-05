@@ -1,5 +1,3 @@
-#include "Strings.hpp"
-
 namespace Strings {
 
 const char *Backslash = "backslash";

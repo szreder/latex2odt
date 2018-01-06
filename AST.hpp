@@ -27,6 +27,9 @@ struct Node {
 	static Type typeFromName(const QString &name);
 	QString toString() const;
 
+	Node & appendNode(Node::Type type, const QString &value);
+	Node & appendNode(Node::Type type, QString &&value);
+
 	Type type;
 	QString value;
 	bool endParagraph = false;

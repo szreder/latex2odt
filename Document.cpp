@@ -100,18 +100,6 @@ inline QString generateEnd(const QString &s)
 
 }
 
-Node & Document::addNode(Node &parent, Node::Type type, const QString &value)
-{
-	QString temp{value};
-	return addNode(parent, type, std::move(temp));
-}
-
-Node & Document::addNode(Node &parent, Node::Type type, QString &&value)
-{
-	parent.children.push_back(Node{type, std::move(value)});
-	return parent.children.back();
-}
-
 inline void Document::ensureData(const QString &data, int idx, int needBytes) const
 {
 	if (idx + needBytes >= data.size()) {
@@ -196,11 +184,11 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 		}
 
 		for (int i = 0; i < contentList.count() - 1; ++i) {
-			Node &child = addNode(node, Node::Type::Text, contentList[i].replace('\n', ' '));
+			Node &child = node.appendNode(Node::Type::Text, contentList[i].replace('\n', ' '));
 			child.endParagraph = true;
 		}
 
-		Node &child = addNode(node, Node::Type::Text, contentList.back().replace('\n', ' '));
+		Node &child = node.appendNode(Node::Type::Text, contentList.back().replace('\n', ' '));
 		child.endParagraph = paragraph;
 		content.clear();
 	};
@@ -236,7 +224,7 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 				} else if (token == Strings::Backslash || token == Strings::TextBackslash) {
 					content += '\\';
 				} else {
-					addNode(node, Node::Type::Tag, token);
+					node.appendNode(Node::Type::Tag, token);
 				}
 
 				if (data[idx - 1] == ' ' || data[idx - 1] == '{' || data[idx - 1] == '}')
@@ -256,7 +244,7 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 				}
 
 				addText();
-				Node &child = addNode(node, Node::Type::Fragment, token);
+				Node &child = node.appendNode(Node::Type::Fragment, token);
 				qDebug() << QString{"token = %1, calling parseSource with endMarker = }, data[idx] = %2"}.arg(token).arg(data[idx]);
 				parseSource(data, idx, child, "}");
 				if (token == Strings::SourceCode) {
@@ -276,9 +264,9 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 					int idx = 0;
 					qDebug() << QString{"token = %1, calling parseSource on sourcecode with endMarker = QString{}"}.arg(token);
 					parseCtx.inCode = true;
-					addNode(node, Node::Type::Tag, Strings::CodeStart);
+					node.appendNode(Node::Type::Tag, Strings::CodeStart);
 					parseSource(sourceText, idx, node, QString{});
-					addNode(node, Node::Type::Tag, Strings::CodeEnd);
+					node.appendNode(Node::Type::Tag, Strings::CodeEnd);
 					parseCtx.inCode = false;
 				}
 			} else if (token == Strings::Begin || token == Strings::End) {
@@ -296,7 +284,7 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 				}
 
 				if (isBegin) {
-					Node &child = addNode(node, Node::Type::Environment, envName);
+					Node &child = node.appendNode(Node::Type::Environment, envName);
 					qDebug() << QString{"environ = %1, calling parseSource with endMarker = %2"}.arg(envName).arg(generateEnd(envName));
 					parseSource(data, idx, child, generateEnd(envName));
 				} else {
@@ -316,7 +304,7 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 				}
 
 				addText();
-				addNode(node, Node::Type::Text, text);
+				node.appendNode(Node::Type::Text, text);
 				if (data[idx] == '}')
 					++idx;
 			}
@@ -333,13 +321,13 @@ void Document::parseSource(const QString &data, int &idx, Node &node, const QStr
 					if (parseCtx.inMathMode) {
 						addText();
 						++idx;
-						Node &child = addNode(node, Node::Type::Fragment, Strings::Superscript);
+						Node &child = node.appendNode(Node::Type::Fragment, Strings::Superscript);
 						if (data[idx] == '{') {
 							++idx;
 							parseSource(data, idx, child, "}");
 							--idx;
 						} else {
-							addNode(child, Node::Type::Text, data[idx]);
+							child.appendNode(Node::Type::Text, data[idx]);
 						}
 					} else {
 						content += data[idx];
@@ -373,7 +361,7 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node &node, co
 		content.replace("<", "&lt;");
 		content.replace(">", "&gt;");
 
-		addNode(node, Node::Type::Text, std::move(content));
+		node.appendNode(Node::Type::Text, std::move(content));
 		content.clear();
 	};
 
@@ -398,8 +386,8 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node &node, co
 				++endUrl;
 			} while (data[endUrl] != ')');
 
-			Node &urlNode = addNode(node, Node::Type::Fragment, Strings::TextTT);
-			addNode(urlNode, Node::Type::Text, data.mid(idx, endUrl - idx));
+			Node &urlNode = node.appendNode(Node::Type::Fragment, Strings::TextTT);
+			urlNode.appendNode(Node::Type::Text, data.mid(idx, endUrl - idx));
 
 			idx = endUrl + 1;
 			continue;
@@ -407,7 +395,7 @@ void Document::parseSourceMarkdown(const QString &data, int &idx, Node &node, co
 
 		if (!parseCtx.inCode && FragmentMap.contains(current)) {
 			addText();
-			Node &child = addNode(node, Node::Type::Fragment, FragmentMap[current]);
+			Node &child = node.appendNode(Node::Type::Fragment, FragmentMap[current]);
 			if (current == '`')
 				parseCtx.inCode = true;
 			parseSourceMarkdown(data, idx, child, current);
@@ -426,10 +414,10 @@ void Document::parseSourceMarkdown(const QString &data)
 	QStringList lines = data.split('\n');
 
 	{
-		Node &t = addNode(documentRoot, Node::Type::Fragment, Strings::Title);
+		Node &t = documentRoot.appendNode(Node::Type::Fragment, Strings::Title);
 		int idx = 1;
 		parseSourceMarkdown(lines[0], idx, t, QString{});
-		addNode(documentRoot, Node::Type::Tag, Strings::MakeTitle);
+		documentRoot.appendNode(Node::Type::Tag, Strings::MakeTitle);
 	}
 
 	int line = 1;
@@ -442,10 +430,10 @@ void Document::parseSourceMarkdown(const QString &data)
 			continue;
 
 		if (s.startsWith("-")) {
-			Node &list = addNode(documentRoot, Node::Type::Environment, Strings::Itemize);
+			Node &list = documentRoot.appendNode(Node::Type::Environment, Strings::Itemize);
 
 			while (s.startsWith("-")) {
-				addNode(list, Node::Type::Tag, Strings::Item);
+				list.appendNode(Node::Type::Tag, Strings::Item);
 				int idx = 1;
 				parseSourceMarkdown(s, idx, list, QString{});
 
@@ -458,7 +446,7 @@ void Document::parseSourceMarkdown(const QString &data)
 		}
 
 		if (s.startsWith("```")) {
-			addNode(documentRoot, Node::Type::Tag, Strings::CodeStart);
+			documentRoot.appendNode(Node::Type::Tag, Strings::CodeStart);
 
 			QString language = s.right(s.length() - 3);
 			QStringList codeLines;
@@ -477,10 +465,10 @@ void Document::parseSourceMarkdown(const QString &data)
 
 			if (language.isEmpty()) {
 				for (QString &l : codeLines) {
-					Node &codeLine = addNode(documentRoot, Node::Type::Environment, Strings::CodeLine);
-					Node &lineContent = addNode(codeLine, Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
+					Node &codeLine = documentRoot.appendNode(Node::Type::Environment, Strings::CodeLine);
+					Node &lineContent = codeLine.appendNode(Node::Type::Fragment, Strings::TextTT); //temporary hack until syntax coloring for markdown is added
 					addEntities(l);
-					addNode(lineContent, Node::Type::Text, l);
+					lineContent.appendNode(Node::Type::Text, l);
 				}
 			} else {
 				QProcess highlight;
@@ -497,7 +485,7 @@ void Document::parseSourceMarkdown(const QString &data)
 				parseSource(QString{output}, idx, documentRoot, QString{});
 				parseCtx.inCode = false;
 			}
-			addNode(documentRoot, Node::Type::Tag, Strings::CodeEnd);
+			documentRoot.appendNode(Node::Type::Tag, Strings::CodeEnd);
 			continue;
 		}
 
@@ -514,7 +502,7 @@ void Document::parseSourceMarkdown(const QString &data)
 			envName = Strings::Paragraph;
 		}
 
-		Node &n = addNode(documentRoot, Node::Type::Environment, envName);
+		Node &n = documentRoot.appendNode(Node::Type::Environment, envName);
 		int idx = hashSymbolCnt;
 		parseSourceMarkdown(s, idx, n, QString{});
 	}

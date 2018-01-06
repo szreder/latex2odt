@@ -94,3 +94,15 @@ QString Node::toString() const
 	QString typeString = TypeHash.value(type, "Invalid");
 	return QString{"type = %1, value = _%2_, endParagraph = %3"}.arg(typeString).arg(value).arg(endParagraph);
 }
+
+Node & Node::appendNode(Node::Type type, const QString &value)
+{
+	QString temp{value};
+	return appendNode(type, std::move(temp));
+}
+
+Node & Node::appendNode(Node::Type type, QString &&value)
+{
+	children.push_back(Node{type, std::move(value)});
+	return children.back();
+}

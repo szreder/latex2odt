@@ -4,6 +4,7 @@
 
 struct Document {
 	Document() = default;
+	Document(Node &&title, Node &&root) : title{std::move(title)}, documentRoot{std::move(root)} {}
 
 	Node & addNode(Node &parent, Node::Type type, const QString &value);
 	Node & addNode(Node &parent, Node::Type type, QString &&value);

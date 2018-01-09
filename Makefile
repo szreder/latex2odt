@@ -1,7 +1,7 @@
 .PHONY : clean
 CXXFLAGS = -Wall -std=c++17 -fPIC
 BIN = odtgen
-OBJS = AST.o Document.o odtgen.o Markup/Cpp.o Strings.o XmlGen.o
+OBJS = AST.o Document.o odtgen.o Markup/Cpp.o Parser/LaTeXParser.o Parser/MarkdownParser.o Strings.o XmlGen.o
 
 $(BIN) : $(OBJS)
 	g++ -o $@ $^ -l Qt5Core

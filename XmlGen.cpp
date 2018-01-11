@@ -5,7 +5,7 @@
 
 QString entryText(const QString &s)
 {
-	const QHash <QString, QString> EntryText {
+	const QHash <QString, const char *> EntryText {
 		{Strings::BoldFace, "<text:span text:style-name=\"Bold\">"},
 		{Strings::CodeLine, "<text:p text:style-name=\"CodeLine\">"},
 		{Strings::Enumerate, "<text:list text:style-name=\"Enumerate\">"},
@@ -41,12 +41,12 @@ QString entryText(const QString &s)
 
 QString exitText(const QString &s)
 {
-	static const QString HeaderEnd = "</text:h>";
-	static const QString ListEnd = "</text:list>";
-	static const QString ParagraphEnd = "</text:p>";
-	static const QString SpanEnd = "</text:span>";
+	static const char * HeaderEnd = "</text:h>";
+	static const char * ListEnd = "</text:list>";
+	static const char * ParagraphEnd = "</text:p>";
+	static const char * SpanEnd = "</text:span>";
 
-	const QHash <QString, QString> ExitText {
+	const QHash <QString, const char *> ExitText {
 		{Strings::BoldFace, SpanEnd},
 		{Strings::CodeLine, ParagraphEnd},
 		{Strings::Italic, SpanEnd},

@@ -67,7 +67,7 @@ Node::Type Node::typeFromName(const QString &name)
 {
 	using TypePair = QPair <const QSet <QString> *, Node::Type>;
 	static const Vector <TypePair> TypeVector {
-		TypePair{&Environment, Type::Environment},
+		{&Environment, Type::Environment},
 		{&Fragment, Type::Fragment},
 		{&Tag, Type::Tag},
 	};

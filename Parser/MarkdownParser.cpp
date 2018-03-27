@@ -64,7 +64,7 @@ void MarkdownParser::parseSource(const QString &data, int &idx, Node &node, cons
 	addText();
 }
 
-Document MarkdownParser::doParse(const QString &data)
+std::optional <Document> MarkdownParser::doParse(const QString &data)
 {
 	Document doc;
 	Node &root = doc.documentRoot;
@@ -165,5 +165,5 @@ Document MarkdownParser::doParse(const QString &data)
 		parseSource(s, idx, n, QString{});
 	}
 
-	return doc;
+	return std::move(doc);
 }

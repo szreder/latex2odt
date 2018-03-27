@@ -17,8 +17,9 @@ int main(int argc, char *argv[])
 	else
 		parser = std::make_unique<LaTeXParser>();
 
-	Document doc = parser->parse(data);
-	doc.output();
+	auto doc = parser->parse(data);
+	if (doc)
+		doc->output();
 
 	return 0;
 }
